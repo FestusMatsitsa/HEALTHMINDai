@@ -57,7 +57,7 @@ def authenticate_user(email, password):
         user = cursor.fetchone()
         conn.close()
         
-        if user and verify_password(password, user['password_hash']):
+        if user and verify_password(password, dict(user)['password_hash']):
             user_dict = dict(user)
             log_user_action(user_dict['id'], "LOGIN", f"User logged in: {email}")
             return user_dict
@@ -133,7 +133,7 @@ def change_password(user_id, current_password, new_password):
         cursor.execute("SELECT password_hash FROM users WHERE id = ?", (user_id,))
         user = cursor.fetchone()
         
-        if not user or not verify_password(current_password, user['password_hash']):
+        if not user or not verify_password(current_password, dict(user)['password_hash']):
             conn.close()
             return False
         

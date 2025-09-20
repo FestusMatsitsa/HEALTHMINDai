@@ -181,8 +181,11 @@ Please analyze this chest X-ray systematically, considering all anatomical struc
             max_completion_tokens=2048
         )
         
-        analysis = json.loads(response.choices[0].message.content)
-        return analysis
+        content = response.choices[0].message.content
+        if content:
+            analysis = json.loads(content)
+            return analysis
+        return None
         
     except Exception as e:
         st.error(f"Error analyzing chest X-ray: {str(e)}")
@@ -254,8 +257,11 @@ Focus on clinically significant patterns and provide evidence-based recommendati
             max_completion_tokens=1500
         )
         
-        analysis = json.loads(response.choices[0].message.content)
-        return analysis
+        content = response.choices[0].message.content
+        if content:
+            analysis = json.loads(content)
+            return analysis
+        return None
         
     except Exception as e:
         st.error(f"Error analyzing clinical data: {str(e)}")
@@ -323,8 +329,11 @@ Integrate findings from both imaging and clinical data to provide the most accur
             max_completion_tokens=2048
         )
         
-        diagnosis = json.loads(response.choices[0].message.content)
-        return diagnosis
+        content = response.choices[0].message.content
+        if content:
+            diagnosis = json.loads(content)
+            return diagnosis
+        return None
         
     except Exception as e:
         st.error(f"Error generating multimodal diagnosis: {str(e)}")

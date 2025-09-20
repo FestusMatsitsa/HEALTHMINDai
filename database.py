@@ -278,18 +278,21 @@ def get_user_statistics(user_id):
         
         # Total cases
         cursor.execute("SELECT COUNT(*) FROM medical_cases WHERE user_id = ?", (user_id,))
-        total_cases = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        total_cases = result[0] if result else 0
         
         # Active cases
         cursor.execute("SELECT COUNT(*) FROM medical_cases WHERE user_id = ? AND case_status = 'active'", (user_id,))
-        active_cases = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        active_cases = result[0] if result else 0
         
         # Cases this month
         cursor.execute("""
             SELECT COUNT(*) FROM medical_cases 
             WHERE user_id = ? AND created_at >= date('now', 'start of month')
         """, (user_id,))
-        monthly_cases = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        monthly_cases = result[0] if result else 0
         
         # Recent activity
         cursor.execute("""

@@ -2,6 +2,7 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from collections import Counter
 from auth import require_auth
 from database import get_user_statistics, get_user_cases
 from utils import display_medical_disclaimer, format_medical_timestamp, generate_case_summary
@@ -208,7 +209,6 @@ with tab3:
         
         with col2:
             if all_diagnoses:
-                from collections import Counter
                 most_common = Counter(all_diagnoses).most_common(1)[0]
                 st.metric(
                     label="Most Common Finding",
