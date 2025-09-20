@@ -1,6 +1,6 @@
 import bcrypt
 import streamlit as st
-from database import get_db_connection, log_user_action
+from database import get_db_connection, log_user_action, get_param_placeholder, is_postgres
 from datetime import datetime
 
 def hash_password(password):
@@ -18,7 +18,8 @@ def register_user(name, email, password, specialty, license_number=""):
         cursor = conn.cursor()
         
         # Check if email already exists
-        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+        placeholder = get_param_placeholder()
+        cursor.execute(f"SELECT id FROM users WHERE email = {placeholder}", (email,))
         if cursor.fetchone():
             conn.close()
             return False
@@ -27,12 +28,25 @@ def register_user(name, email, password, specialty, license_number=""):
         password_hash = hash_password(password)
         
         # Insert new user
-        cursor.execute("""
-            INSERT INTO users (name, email, password_hash, specialty, license_number, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (name, email, password_hash, specialty, license_number, datetime.now()))
+        placeholder = get_param_placeholder()
+        if is_postgres():
+            query = f"""
+                INSERT INTO users (name, email, password_hash, specialty, license_number, created_at)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                RETURNING id
+            """
+        else:
+            query = f"""
+                INSERT INTO users (name, email, password_hash, specialty, license_number, created_at)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+            """
+        cursor.execute(query, (name, email, password_hash, specialty, license_number, datetime.now()))
         
-        user_id = cursor.lastrowid
+        if is_postgres():
+            result = cursor.fetchone()
+            user_id = result['id'] if result else None
+        else:
+            user_id = cursor.lastrowid
         conn.commit()
         conn.close()
         
@@ -49,9 +63,10 @@ def authenticate_user(email, password):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute("""
+        placeholder = get_param_placeholder()
+        cursor.execute(f"""
             SELECT id, name, email, password_hash, specialty, license_number 
-            FROM users WHERE email = ?
+            FROM users WHERE email = {placeholder}
         """, (email,))
         
         user = cursor.fetchone()
@@ -74,9 +89,10 @@ def get_current_user(user_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute("""
+        placeholder = get_param_placeholder()
+        cursor.execute(f"""
             SELECT id, name, email, specialty, license_number, created_at
-            FROM users WHERE id = ?
+            FROM users WHERE id = {placeholder}
         """, (user_id,))
         
         user = cursor.fetchone()
@@ -94,23 +110,27 @@ def update_user_profile(user_id, updates):
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Whitelist allowed columns for security
+        allowed_columns = ['name', 'specialty', 'license_number']
+        
         # Build update query dynamically
         set_clauses = []
         values = []
+        placeholder = get_param_placeholder()
         
         for key, value in updates.items():
-            if key in ['name', 'specialty', 'license_number']:
-                set_clauses.append(f"{key} = ?")
+            if key in allowed_columns:
+                set_clauses.append(f"{key} = {placeholder}")
                 values.append(value)
         
         if not set_clauses:
             return False
             
-        set_clauses.append("updated_at = ?")
+        set_clauses.append(f"updated_at = {placeholder}")
         values.append(datetime.now())
         values.append(user_id)
         
-        query = f"UPDATE users SET {', '.join(set_clauses)} WHERE id = ?"
+        query = f"UPDATE users SET {', '.join(set_clauses)} WHERE id = {placeholder}"
         
         cursor.execute(query, values)
         conn.commit()
@@ -130,7 +150,8 @@ def change_password(user_id, current_password, new_password):
         cursor = conn.cursor()
         
         # Get current password hash
-        cursor.execute("SELECT password_hash FROM users WHERE id = ?", (user_id,))
+        placeholder = get_param_placeholder()
+        cursor.execute(f"SELECT password_hash FROM users WHERE id = {placeholder}", (user_id,))
         user = cursor.fetchone()
         
         if not user or not verify_password(current_password, dict(user)['password_hash']):
@@ -139,8 +160,9 @@ def change_password(user_id, current_password, new_password):
         
         # Update password
         new_hash = hash_password(new_password)
-        cursor.execute("""
-            UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?
+        placeholder = get_param_placeholder()
+        cursor.execute(f"""
+            UPDATE users SET password_hash = {placeholder}, updated_at = {placeholder} WHERE id = {placeholder}
         """, (new_hash, datetime.now(), user_id))
         
         conn.commit()
